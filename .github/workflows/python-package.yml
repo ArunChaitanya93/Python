@@ -1,31 +1,33 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Python package
+name: Python package #pipeline name
 
-on:
+on:  # Controls when the action will run. Triggers the workflow on push or pull request events but only for the main branch
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
-jobs:
-  build:
+jobs: #A set of jobs (collection of jobs == pipeline) that will be run as part of the workflow
+  build: # first job in the pipeline
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # worker type to run the job on
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11"]
 
-    steps:
-    - uses: actions/checkout@v4
+    steps: # A set of steps to be run as part of the job
+    - uses: actions/checkout@v4 # action - pre-created code for common tasks
+      with:
+        fetch-depth: 0  # Shallow clones should be
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run: |
+      run: | #run - to run shell commands
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
@@ -44,7 +46,7 @@ jobs:
         name: coverage-report
         path: coverage.xml
 
-  sonarqube-scanner:
+  sonarqube-scanner: # second job in the pipeline
     name: Build and analyze With SonarQube
     runs-on: ubuntu-latest
     needs: [build]
