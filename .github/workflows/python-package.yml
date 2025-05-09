@@ -78,8 +78,10 @@ jobs: #A set of jobs (collection of jobs == pipeline) that will be run as part o
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   
-  dockerbuil:
+  dockerbuild:
+    name: build and push docker image
     runs-on: ubuntu-latest
+    needs: [build, sonarqube-scanner]
     steps:
       -
         name: Login to Docker Hub
