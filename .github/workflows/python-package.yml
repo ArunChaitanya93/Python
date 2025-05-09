@@ -70,7 +70,7 @@ jobs: #A set of jobs (collection of jobs == pipeline) that will be run as part o
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
-          args: -Dsonar.python.coverage.reportPaths=coverage.xml
+          args: -Dsonar.python.coverage.reportPath=coverage.xml
       # If you wish to fail your job when the Quality Gate is red, uncomment the
       # following lines. This would typically be used to fail a deployment.
       - uses: SonarSource/sonarqube-quality-gate-action@v1
