@@ -1,33 +1,34 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Python package
+name: Python package #pipeline name
 
-on:
-  push:
-    branches: [ "main" ]
+on:  # Controls when the action will run. Triggers the workflow on push or pull request events but only for the main branch
+  # push:
+  #   branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
-jobs:
-  build:
+jobs: #A set of jobs (collection of jobs == pipeline) that will be run as part of the workflow
+  build: # first job in the pipeline
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # worker type to run the job on
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.11"]
 
-    steps:
-    - uses: actions/checkout@v4
+    steps: # A set of steps to be run as part of the job
+    - uses: actions/checkout@v4 # action - pre-created code for common tasks
+      with:
+        fetch-depth: 0  # Shallow clones should be
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run: |
+      run: | #run - to run shell commands
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
       run: |
@@ -37,4 +38,67 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest
+        pytest --cov=app --cov-report=xml:coverage.xml
+        cat coverage.xml
+    - name: Upload Coverage Report to Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage.xml
+
+  sonarqube-scanner: # second job in the pipeline
+    name: Build and analyze With SonarQube
+    runs-on: ubuntu-latest
+    needs: [build]
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      
+      - name: "Download Artifact- coverage-report"  
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+
+      - name: "read coverage report"
+        run: |
+          cat coverage.xml
+
+      - uses: SonarSource/sonarqube-scan-action@v5 #scanner
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: -Dsonar.python.coverage.reportPaths=coverage.xml
+      # If you wish to fail your job when the Quality Gate is red, uncomment the
+      # following lines. This would typically be used to fail a deployment.
+      - uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  dockerbuildImage:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [build, sonarqube-scanner ]
+    
+    steps:
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: jinny1/gfgdevops33:latest
