@@ -6,7 +6,7 @@ def create_app():
 
     @app.route('/')
     def home():
-        x = 124
+        x = 1246
         print("inside home function")
         return 'Hurray GFG - Arun Chaitanya!'
 
